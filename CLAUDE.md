@@ -31,7 +31,10 @@ Authoritative docs:
 - For each task:
   1) restate acceptance criteria
   2) implement
-  3) explain how to run/verify locally
+  3) write tests
+  4) run tests and ensure they all pass
+  5) explain how to run/verify locally
+  6) Update BACKLOG.md with the completed tasks and adjust as necessary
 
 ## How to run (expected)
 RN app will live at `ios-app/` and be built/run via Xcode device installs.
