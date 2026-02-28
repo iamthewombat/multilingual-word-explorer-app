@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(which pod:*)",
+      "Bash(cd /Users/justinluu/code/multilingual-word-explorer-app/WordExplorer && npx tsc --noEmit 2>&1)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "WebFetch(domain:multilingual-word-explorer.vercel.app)",
+      "Bash(cd /Users/justinluu/code/multilingual-word-explorer-app && find . -name \"package.json\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" | xargs cat 2>/dev/null)",
+      "WebSearch",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx jest:*)",
+      "Bash(npm install:*)",
+      "Bash(git ls-tree:*)"
+    ]
+  }
+}

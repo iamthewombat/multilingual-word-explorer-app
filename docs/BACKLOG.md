@@ -53,7 +53,7 @@ Work items are ordered top-to-bottom. Check off items as they are completed.
 - [x] `src/components/TranslationBlock.tsx` — white card, language label, translated word, circular gradient play button.
 - [x] Three instances rendered: English, Thai, Cantonese.
 - [x] Play button: gradient fill, white speaker icon drawn with Views.
-- [ ] Only one audio plays at a time (requires Epic 5 — TTS).
+- [x] Only one audio plays at a time (implemented in Epic 5 — TTS).
 
 ### 1.9 Results state — Reset
 - [x] "Listen to Another Word" gradient pill button below translation blocks.
@@ -70,39 +70,62 @@ Work items are ordered top-to-bottom. Check off items as they are completed.
 
 ## Epic 2 — Push-to-talk STT
 
-- [ ] Add mic permission handling (Info.plist key + runtime request).
-- [ ] Integrate push-to-talk: `onPressIn` starts recording, `onPressOut` ends.
-- [ ] Wire STT library; return transcript to `inputText`.
-- [ ] Make transcript editable before lookup.
-- [ ] AC: user never depends on auto end-detection.
+- [x] Add mic permission handling (Info.plist keys: NSMicrophoneUsageDescription + NSSpeechRecognitionUsageDescription).
+- [x] Integrate push-to-talk: `onPressIn` starts recording, `onPressOut` ends.
+- [x] Wire `@react-native-voice/voice` STT; return transcript to `inputText`.
+- [x] Make transcript editable before lookup (transcript lands in text input; user submits manually).
+- [x] AC: user never depends on auto end-detection.
+- [x] `MicState` ('idle' | 'recording' | 'transcribing') with visual label + spinner.
+- [x] Short haptic on press-in via `Vibration.vibrate(30)`.
+- [x] Inline error message (auto-clears after 4 s); permission errors surface an Alert.
+- [x] Unit tests: `NativeVoiceRecognizer.test.ts` (7 tests), `LanguageChips.test.tsx` (7 tests), `App.test.tsx`.
 
 ---
 
 ## Epic 3 — Translation integration
 
-- [ ] Define `Translator` interface in `src/services/translator.ts`.
-- [ ] Implement backend call (server-side keys; no secrets in client).
-- [ ] Map API response to `{english, thai, cantonese}` shape.
-- [ ] Render real translations in the three `TranslationBlock` components.
-- [ ] AC: translations render under each language header.
+### 3.1 Service layer
+- [x] Define `Translator` interface + `TranslationResult` type in `src/services/translator.ts`.
+- [x] Create `src/config/env.ts` (gitignored) with `GOOGLE_TRANSLATE_API_KEY` placeholder.
+- [x] Implement `GoogleTranslator` in `src/services/GoogleTranslator.ts`:
+  - Calls Google Cloud Translation v2 API (`translation.googleapis.com`).
+  - Translates the input word to `en`, `th`, and `zh-TW` (Traditional Chinese / Cantonese proxy) in parallel.
+  - Throws a descriptive error on non-OK HTTP responses.
+
+### 3.2 HomeScreen integration
+- [x] Add `'looking-up'` to `AppState` (`'idle' | 'recording' | 'transcribing' | 'looking-up' | 'results'`).
+- [x] Add `translationResult` state (`TranslationResult | null`).
+- [x] `handleLookup` now calls `translator.translate(word)`, transitions through `'looking-up'` → `'results'`.
+- [x] Loading UI: show `WordSummaryCard` (word visible) + `ActivityIndicator` placeholder while fetching.
+- [x] Replace hard-coded `PLACEHOLDER_RESULTS` with real `translationResult` values.
+- [x] On translation error: show inline error, revert to `'idle'`.
+
+### 3.3 AC
+- [ ] Typing "dog" and submitting shows correct English / Thai / Cantonese translations.
+- [ ] A loading indicator is visible while the API call is in flight.
+- [ ] Missing or empty API key shows a clear developer error (not a silent crash).
 
 ---
 
 ## Epic 4 — Image integration
 
-- [ ] Define `ImageProvider` interface in `src/services/imageProvider.ts`.
-- [ ] Implement Pexels lookup for the queried word.
-- [ ] Render image in `WordSummaryCard` (replace placeholder text).
-- [ ] Add fallback UI when no image is found.
+- [x] Define `ImageProvider` interface in `src/services/imageProvider.ts`.
+- [x] Implement Pexels lookup for the queried word (`PexelsImageProvider`).
+- [x] Render image in `WordSummaryCard` (above word text, with loading state).
+- [x] Add fallback UI when no image is found (text-only layout, graceful degradation).
+- [x] Wire image lookup in parallel with translation in `HomeScreen.handleLookup`.
+- [x] Unit tests for `PexelsImageProvider` (7 tests).
 
 ---
 
 ## Epic 5 — Text-to-speech
 
-- [ ] Define `SpeechSynthesizer` interface in `src/services/speech.ts`.
-- [ ] Implement TTS per language (EN / TH / YUE).
-- [ ] Wire play buttons in `TranslationBlock` to TTS playback.
-- [ ] Enforce single-playback-at-a-time constraint.
+- [x] Define `SpeechSynthesizer` interface in `src/services/speechSynthesizer.ts`.
+- [x] Implement `NativeSpeechSynthesizer` using `react-native-tts` (EN / TH / YUE via locale mapping).
+- [x] Wire play buttons in `TranslationBlock` to TTS playback via `HomeScreen.handlePlay`.
+- [x] Enforce single-playback-at-a-time constraint (stop current before starting new; toggle off if same language tapped).
+- [x] Visual feedback: play button shows stop icon (■) and reduced opacity while playing.
+- [x] Unit tests for `NativeSpeechSynthesizer` (8 tests).
 
 ---
 

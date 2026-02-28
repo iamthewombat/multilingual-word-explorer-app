@@ -8,6 +8,7 @@ Authoritative docs:
 - `docs/REFERENCE_APP.md` — behavioural reference from the existing web app
 - `docs/TECH_SPEC.md` — architecture + bootstrapping commands
 - `docs/BACKLOG.md` — initial tasks
+- `docs/NEW_ARCH_NOTES.md` — New Architecture (TurboModules) compatibility workarounds
 
 ## Working rules (non-negotiable)
 - Never add, paste, or commit secrets (API keys, tokens, service account JSON, etc.).
