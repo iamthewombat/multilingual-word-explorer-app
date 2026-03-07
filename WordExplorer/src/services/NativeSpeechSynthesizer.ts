@@ -69,23 +69,44 @@ export class NativeSpeechSynthesizer implements SpeechSynthesizer {
     // Set language
     Tts.setDefaultLanguage(locale);
 
-    return new Promise<void>((resolve) => {
-      const onFinish = () => {
-        cleanup();
-        resolve();
+    return new Promise<void>(resolve => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        try {
+          Tts.removeEventListener('tts-finish', onFinish);
+        } catch {
+          /* listener may already be removed */
+        }
+        try {
+          Tts.removeEventListener('tts-cancel', onCancel);
+        } catch {
+          /* listener may already be removed */
+        }
       };
-      const onCancel = () => {
+
+      const settle = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
         cleanup();
         resolve();
       };
 
-      const cleanup = () => {
-        Tts.removeAllListeners('tts-finish');
-        Tts.removeAllListeners('tts-cancel');
-      };
+      const onFinish = () => settle();
+      const onCancel = () => settle();
 
       Tts.addEventListener('tts-finish', onFinish);
       Tts.addEventListener('tts-cancel', onCancel);
+
+      // Timeout: if TTS engine silently fails, resolve after 10 s
+      timer = setTimeout(settle, 10000);
 
       Tts.speak(text);
     });
@@ -97,7 +118,11 @@ export class NativeSpeechSynthesizer implements SpeechSynthesizer {
 
   destroy(): void {
     ttsStop();
-    Tts.removeAllListeners('tts-finish');
-    Tts.removeAllListeners('tts-cancel');
+    try {
+      Tts.removeAllListeners('tts-finish');
+      Tts.removeAllListeners('tts-cancel');
+    } catch {
+      /* best-effort */
+    }
   }
 }

@@ -32,14 +32,11 @@ Use this checklist for iPhone testing (Xcode-run builds). Keep it fast and pract
 - [ ] Starting a different language stops the previous one.
 - [ ] Re-tapping stops playback (or restarts) consistently.
 
-## G. Suggestions ("Did you mean")
-- [ ] When transcription is low confidence or ambiguous, suggestions appear.
-- [ ] Tapping a suggestion runs lookup for that word.
+## G. Suggestions (“Did you mean”)
+N/A (feature removed from scope)
 
 ## H. Multiple meanings setting
-- [ ] Settings contains: “For words with multiple meanings: Prompt for clarification (Default) / Show first result”.
-- [ ] Default is Prompt for clarification.
-- [ ] Switching setting changes behaviour on next lookup.
+N/A (feature removed from scope)
 
 ## I. Start over / reset
 - [ ] Start over clears transcript, suggestions, results, and image.

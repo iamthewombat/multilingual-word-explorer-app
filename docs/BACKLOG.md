@@ -129,25 +129,22 @@ Work items are ordered top-to-bottom. Check off items as they are completed.
 
 ---
 
-## Epic 6 — Settings & multiple meanings
-
-- [ ] Persist settings toggle (`disambiguate`) with AsyncStorage (or MMKV).
-- [ ] Apply setting to lookup flow: prompt clarification vs. first result.
-- [ ] Build disambiguation UI (show word-sense options before lookup).
+## ~~Epic 6 — Settings & multiple meanings~~ *(removed — prompt field makes this unnecessary)*
 
 ---
 
-## Epic 7 — Error handling polish
+## Epic 6 — Error handling polish
 
-- [ ] Detect offline state; show appropriate message.
-- [ ] Handle provider errors (STT, translation, image, TTS) with user-facing messages.
-- [ ] Add retry affordance for failed lookups.
+- [x] Detect offline state with `@react-native-community/netinfo`; block mic/submit and show "No internet connection" message.
+- [x] Handle provider errors (STT, translation, image, TTS) with user-facing messages — TTS now shows "Audio playback failed." on error.
+- [x] Add retry affordance for failed lookups (Retry button appears alongside error, clears on new interaction).
+- [x] Tests: HomeScreen offline detection + retry button (4 tests in `__tests__/HomeScreen.test.tsx`).
 
 ---
 
-## Epic 8 — Testing & release hygiene
+## Epic 7 — Testing & release hygiene
 
-- [ ] Unit tests for `AppState` transitions in `HomeScreen`.
-- [ ] Unit tests for `LanguageChips` single-select behaviour.
-- [ ] Manual acceptance pass using `docs/ACCEPTANCE_TESTS.md`.
-- [ ] Confirm no API keys or secrets are committed.
+- [x] Unit tests for `AppState` transitions in `HomeScreen` (4 tests: idle→looking-up→results, results→idle, idle→recording, submit guard).
+- [x] Unit tests for `LanguageChips` single-select behaviour (1 test: gradient on selected chip, inactive bg on others).
+- [x] Manual acceptance pass using `docs/ACCEPTANCE_TESTS.md` — sections G/H marked N/A (features removed from scope).
+- [x] Confirm no API keys or secrets are committed.

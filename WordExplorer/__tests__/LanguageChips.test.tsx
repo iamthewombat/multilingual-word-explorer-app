@@ -11,9 +11,11 @@
  */
 
 import React from 'react';
-import {TouchableOpacity} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
+import LinearGradient from 'react-native-linear-gradient';
 import {LanguageChips, Language} from '../src/components/LanguageChips';
+import {CHIP_INACTIVE_BG} from '../src/theme/colors';
 
 const {act} = ReactTestRenderer;
 
@@ -84,6 +86,47 @@ describe('LanguageChips', () => {
 
     // Callback fires (parent state logic handles deduplication if needed).
     expect(onSelect).toHaveBeenCalledWith('English');
+    act(() => {
+      renderer.unmount();
+    });
+  });
+
+  it('applies gradient to exactly the selected chip and inactive bg to others', () => {
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = ReactTestRenderer.create(
+        <LanguageChips selected="ไทย" onSelect={jest.fn()} />,
+      );
+    });
+
+    const touchables = renderer.root.findAllByType(TouchableOpacity);
+
+    // Count chips with a LinearGradient child vs those with inactive bg
+    let gradientCount = 0;
+    let inactiveCount = 0;
+
+    touchables.forEach((t: any) => {
+      const gradients = t.findAllByType(LinearGradient as any);
+      if (gradients.length > 0) {
+        gradientCount++;
+      } else {
+        // The inner View wrapping the chip text should have CHIP_INACTIVE_BG
+        const views = t.findAllByType(View);
+        const hasInactiveBg = views.some((v: any) => {
+          const flatStyle = Array.isArray(v.props.style)
+            ? Object.assign({}, ...v.props.style)
+            : v.props.style;
+          return flatStyle?.backgroundColor === CHIP_INACTIVE_BG;
+        });
+        if (hasInactiveBg) {
+          inactiveCount++;
+        }
+      }
+    });
+
+    expect(gradientCount).toBe(1);
+    expect(inactiveCount).toBe(2);
+
     act(() => {
       renderer.unmount();
     });

@@ -12,6 +12,8 @@ module.exports = {
       '<rootDir>/__mocks__/react-native-linear-gradient.js',
     '@react-native-voice/voice':
       '<rootDir>/__mocks__/@react-native-voice/voice.js',
+    '@react-native-community/netinfo':
+      '<rootDir>/__mocks__/@react-native-community/netinfo.js',
     // Our own CJS mock — the official jest/mock.tsx only uses `export default`
     // which means named imports (SafeAreaProvider, SafeAreaView) resolve to
     // undefined in test environments.

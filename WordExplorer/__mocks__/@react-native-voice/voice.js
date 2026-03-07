@@ -10,6 +10,7 @@ const Voice = {
   onSpeechResults: null,
   onSpeechError: null,
   onSpeechEnd: null,
+  onSpeechStart: null,
 };
 
 module.exports = Voice;

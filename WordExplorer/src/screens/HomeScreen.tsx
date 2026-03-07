@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import {useNetInfo} from '@react-native-community/netinfo';
 
 import {Header} from '../components/Header';
 import {LanguageChips, Language} from '../components/LanguageChips';
@@ -51,6 +52,9 @@ export function HomeScreen(): React.JSX.Element {
     useState<TranslationResult | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [playingLanguage, setPlayingLanguage] = useState<string | null>(null);
+  const [retryWord, setRetryWord] = useState<string | null>(null);
+
+  const netInfo = useNetInfo();
 
   const recognizerRef = useRef<SpeechRecognizer>(new NativeVoiceRecognizer());
   const translatorRef = useRef<Translator>(new GoogleTranslator());
@@ -59,6 +63,12 @@ export function HomeScreen(): React.JSX.Element {
     new NativeSpeechSynthesizer(),
   );
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appStateRef = useRef<AppState>('idle');
+
+  // Keep ref in sync with state so callbacks always see latest value
+  useEffect(() => {
+    appStateRef.current = appState;
+  }, [appState]);
 
   const hasResults = appState === 'results';
   const isLookingUp = appState === 'looking-up';
@@ -85,76 +95,123 @@ export function HomeScreen(): React.JSX.Element {
     };
   }, []);
 
+  // Safety-net: if stuck in 'transcribing' for >5 s, reset to idle.
+  // This catches cases where the iOS speech framework silently fails to start
+  // (e.g. after TTS playback holds the audio session).
+  useEffect(() => {
+    if (appState !== 'transcribing') {
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (appStateRef.current === 'transcribing') {
+        showError('Speech recognition timed out — please try again.');
+        setAppState('idle');
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [appState, showError]);
+
   // ── Mic handlers ───────────────────────────────────────────────────────────
 
   const handleMicPressIn = useCallback(async () => {
-    if (appState !== 'idle') {
+    if (appStateRef.current !== 'idle') {
       return;
     }
+    if (netInfo.isConnected === false) {
+      showError(
+        'No internet connection. Please check your network and try again.',
+      );
+      return;
+    }
+    setRetryWord(null);
     Vibration.vibrate(30);
     setAppState('recording');
     const locale = SPEECH_LOCALE[selectedLanguage] ?? 'en-US';
 
-    await recognizerRef.current.startListening(locale, {
-      onResult: (text: string) => {
-        setInputText(text);
-        setAppState('idle');
-      },
-      onError: (message: string) => {
-        if (message.toLowerCase().includes('permission')) {
-          Alert.alert('Microphone Access Required', message, [{text: 'OK'}]);
-        } else {
-          showError(message);
-        }
-        setAppState('idle');
-      },
-    });
-  }, [appState, selectedLanguage, showError]);
+    try {
+      await recognizerRef.current.startListening(locale, {
+        onResult: (text: string) => {
+          setInputText(text);
+          setAppState('idle');
+        },
+        onError: (message: string) => {
+          if (message.toLowerCase().includes('permission')) {
+            Alert.alert('Microphone Access Required', message, [{text: 'OK'}]);
+          } else {
+            showError(message);
+          }
+          setAppState('idle');
+        },
+      });
+    } catch {
+      showError('Failed to start speech recognition.');
+      setAppState('idle');
+    }
+  }, [selectedLanguage, showError, netInfo.isConnected]);
 
   const handleMicPressOut = useCallback(async () => {
-    if (appState !== 'recording') {
+    if (appStateRef.current !== 'recording') {
       return;
     }
     setAppState('transcribing');
     await recognizerRef.current.stopListening();
-  }, [appState]);
+  }, []);
 
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
-  const handleLookup = useCallback(async () => {
-    const word = inputText.trim();
-    if (!word) {
-      return;
-    }
-    setAppState('looking-up');
-    setImageUrl(null);
+  const handleLookup = useCallback(
+    async (overrideWord?: string) => {
+      if (appStateRef.current !== 'idle') {
+        return;
+      }
+      const word = (overrideWord ?? inputText).trim();
+      if (!word) {
+        return;
+      }
+      if (netInfo.isConnected === false) {
+        showError(
+          'No internet connection. Please check your network and try again.',
+        );
+        return;
+      }
+      setRetryWord(null);
+      setAppState('looking-up');
+      setImageUrl(null);
 
-    const [translationOutcome, imageOutcome] = await Promise.allSettled([
-      translatorRef.current.translate(word),
-      imageProviderRef.current.search(word),
-    ]);
+      const [translationOutcome, imageOutcome] = await Promise.allSettled([
+        translatorRef.current.translate(word),
+        imageProviderRef.current.search(word),
+      ]);
 
-    // Translation is critical — fail on error
-    if (translationOutcome.status === 'rejected') {
-      const reason = translationOutcome.reason;
-      const message =
-        reason instanceof Error
-          ? reason.message
-          : 'Translation failed. Please try again.';
-      showError(message);
-      setAppState('idle');
-      return;
-    }
+      // Translation is critical — fail on error
+      if (translationOutcome.status === 'rejected') {
+        const reason = translationOutcome.reason;
+        let message =
+          reason instanceof Error
+            ? reason.message
+            : 'Translation failed. Please try again.';
+        // Detect network errors and show a friendlier message
+        if (message.toLowerCase().includes('network request failed')) {
+          message =
+            'No internet connection. Please check your network and try again.';
+        }
+        showError(message);
+        setRetryWord(word);
+        setAppState('idle');
+        return;
+      }
 
-    setTranslationResult(translationOutcome.value);
+      setTranslationResult(translationOutcome.value);
 
-    // Image is non-critical — use result if available, ignore failures
-    if (imageOutcome.status === 'fulfilled' && imageOutcome.value) {
-      setImageUrl(imageOutcome.value.url);
-    }
+      // Image is non-critical — use result if available, ignore failures
+      if (imageOutcome.status === 'fulfilled' && imageOutcome.value) {
+        setImageUrl(imageOutcome.value.url);
+      }
 
-    setAppState('results');
-  }, [inputText, showError]);
+      setAppState('results');
+    },
+    [inputText, showError, netInfo.isConnected],
+  );
 
   const handleStartOver = useCallback(() => {
     synthesizerRef.current.stop();
@@ -180,12 +237,12 @@ export function HomeScreen(): React.JSX.Element {
       try {
         await synthesizerRef.current.speak(text, locale);
       } catch {
-        // TTS failure is non-critical — just clear the playing state
+        showError('Audio playback failed.');
       }
 
       setPlayingLanguage(null);
     },
-    [playingLanguage],
+    [playingLanguage, showError],
   );
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -279,11 +336,24 @@ export function HomeScreen(): React.JSX.Element {
             <TextInputWithSubmit
               value={inputText}
               onChangeText={setInputText}
-              onSubmit={handleLookup}
+              onSubmit={() => {
+                setRetryWord(null);
+                handleLookup();
+              }}
             />
 
             {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.errorRow}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+                {retryWord ? (
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => handleLookup(retryWord)}
+                    activeOpacity={0.7}>
+                    <Text style={styles.retryText}>Retry</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             ) : null}
           </>
         )}
@@ -376,12 +446,27 @@ const styles = StyleSheet.create({
   },
 
   /* Error message */
-  errorText: {
+  errorRow: {
     marginHorizontal: 24,
     marginTop: 8,
+    alignItems: 'center',
+  },
+  errorText: {
     fontSize: 14,
     color: '#DC2626',
     textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#DC2626',
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   /* Reset button */

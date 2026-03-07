@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Text, Image, StyleSheet, ActivityIndicator} from 'react-native';
 import {WORD_CARD_BG} from '../theme/colors';
 
@@ -10,6 +10,12 @@ interface Props {
 export function WordSummaryCard({word, imageUrl}: Props): React.JSX.Element {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+
+  // Reset image state when the URL changes (new lookup)
+  useEffect(() => {
+    setImageLoading(true);
+    setImageError(false);
+  }, [imageUrl]);
 
   const showImage = !!imageUrl && !imageError;
 
