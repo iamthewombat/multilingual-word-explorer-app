@@ -9,6 +9,7 @@ import {
   Alert,
   Vibration,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useNetInfo} from '@react-native-community/netinfo';
@@ -38,6 +39,20 @@ type AppState =
   | 'transcribing'
   | 'looking-up'
   | 'results';
+
+// ─── FadeInView ───────────────────────────────────────────────────────────────
+
+function FadeInView({children}: {children: React.ReactNode}): React.JSX.Element {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  }, [opacity]);
+  return <Animated.View style={{opacity}}>{children}</Animated.View>;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -267,7 +282,7 @@ export function HomeScreen(): React.JSX.Element {
 
         {hasResults || isLookingUp ? (
           /* ── Results / loading state ───────────────────────────────────── */
-          <>
+          <FadeInView key="results">
             <WordSummaryCard word={inputText} imageUrl={imageUrl} />
 
             {isLookingUp ? (
@@ -286,6 +301,7 @@ export function HomeScreen(): React.JSX.Element {
                   onPlay={() =>
                     handlePlay('English', translationResult?.english ?? '')
                   }
+                  index={0}
                 />
                 <TranslationBlock
                   language="Thai"
@@ -294,6 +310,7 @@ export function HomeScreen(): React.JSX.Element {
                   onPlay={() =>
                     handlePlay('Thai', translationResult?.thai ?? '')
                   }
+                  index={1}
                 />
                 <TranslationBlock
                   language="Cantonese"
@@ -302,6 +319,7 @@ export function HomeScreen(): React.JSX.Element {
                   onPlay={() =>
                     handlePlay('Cantonese', translationResult?.cantonese ?? '')
                   }
+                  index={2}
                 />
 
                 <TouchableOpacity
@@ -318,10 +336,10 @@ export function HomeScreen(): React.JSX.Element {
                 </TouchableOpacity>
               </>
             )}
-          </>
+          </FadeInView>
         ) : (
           /* ── Input state ──────────────────────────────────────────────── */
-          <>
+          <FadeInView key="input">
             <LanguageChips
               selected={selectedLanguage}
               onSelect={setSelectedLanguage}
@@ -355,7 +373,7 @@ export function HomeScreen(): React.JSX.Element {
                 ) : null}
               </View>
             ) : null}
-          </>
+          </FadeInView>
         )}
       </ScrollView>
 

@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, Image, StyleSheet, ActivityIndicator} from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {View, Text, Image, StyleSheet, ActivityIndicator, Animated} from 'react-native';
 import {WORD_CARD_BG} from '../theme/colors';
 
 interface Props {
@@ -11,6 +11,24 @@ export function WordSummaryCard({word, imageUrl}: Props): React.JSX.Element {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
+  const slideAnim = useRef(new Animated.Value(24)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   // Reset image state when the URL changes (new lookup)
   useEffect(() => {
     setImageLoading(true);
@@ -20,7 +38,11 @@ export function WordSummaryCard({word, imageUrl}: Props): React.JSX.Element {
   const showImage = !!imageUrl && !imageError;
 
   return (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
+      ]}>
       {showImage && (
         <View style={styles.imageContainer}>
           {imageLoading && (
@@ -43,7 +65,7 @@ export function WordSummaryCard({word, imageUrl}: Props): React.JSX.Element {
         </View>
       )}
       <Text style={styles.word}>{word.toUpperCase()}</Text>
-    </View>
+    </Animated.View>
   );
 }
 

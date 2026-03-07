@@ -1,5 +1,5 @@
-import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, ActivityIndicator} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {MIC_GRADIENT_COLORS, SHADOW_COLOR} from '../theme/colors';
 
@@ -71,12 +71,46 @@ export function MicButton({
   const isDisabled = micState === 'transcribing';
   const circleOpacity = micState === 'recording' ? 0.8 : 1;
 
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (micState === 'recording') {
+      pulseRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.18,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulseRef.current.start();
+    } else {
+      pulseRef.current?.stop();
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+    return () => {
+      pulseRef.current?.stop();
+    };
+  }, [micState, pulseAnim]);
+
   return (
     <View style={styles.container}>
-      <View
+      <Animated.View
         style={[
           styles.halo,
           micState === 'recording' && styles.haloRecording,
+          {transform: [{scale: pulseAnim}]},
         ]}>
         <TouchableOpacity
           onPressIn={onPressIn}
@@ -95,7 +129,7 @@ export function MicButton({
             )}
           </LinearGradient>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
       <Text
         style={[
           styles.label,

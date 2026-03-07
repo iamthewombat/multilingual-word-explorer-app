@@ -1,5 +1,5 @@
-import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {GRADIENT_COLORS, LABEL_SUBDUED, CARD_BG} from '../theme/colors';
 
@@ -9,6 +9,7 @@ interface Props {
   word: string;
   isPlaying?: boolean;
   onPlay: () => void;
+  index?: number;
 }
 
 export function TranslationBlock({
@@ -16,9 +17,36 @@ export function TranslationBlock({
   word,
   isPlaying = false,
   onPlay,
+  index = 0,
 }: Props): React.JSX.Element {
+  const slideAnim = useRef(new Animated.Value(16)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const delay = index * 80;
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 280,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 280,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [fadeAnim, slideAnim, index]);
+
   return (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
+      ]}>
       <View style={styles.content}>
         <Text style={styles.languageLabel}>{language}</Text>
         <Text style={styles.word}>{word}</Text>
@@ -35,7 +63,7 @@ export function TranslationBlock({
           </Text>
         </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 
